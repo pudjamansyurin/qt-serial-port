@@ -5,8 +5,10 @@ Serial::Serial(QObject* parent)
 {
     mTransport = new QSerialPort(this);
 
-    connect(mTransport, &QSerialPort::readyRead, this, &Serial::onReadyRead);
-    connect(mTransport, &QSerialPort::errorOccurred, this, &Serial::onError);
+    connect(mTransport, &QSerialPort::readyRead,
+        this, &Serial::onReadyRead);
+    connect(mTransport, &QSerialPort::errorOccurred,
+        this, &Serial::onError);
 }
 
 void Serial::toggleConnection(const QString& port, int baudrate)
@@ -20,8 +22,11 @@ void Serial::toggleConnection(const QString& port, int baudrate)
 
 bool Serial::connectSerial(const QString& port, int baudrate)
 {
+    QString msg;
+
     if (!isValidPort(port)) {
-        emit errorOccured(tr("Invalid serial port %1").arg(port));
+        msg = tr("Invalid serial port %1").arg(port);
+        emit errorOccured(msg);
         return false;
     }
 
@@ -30,7 +35,8 @@ bool Serial::connectSerial(const QString& port, int baudrate)
         QFileInfo fi(port);
         if (fi.exists()) {
             if (!fi.isWritable()) {
-                emit errorOccured(tr("Serial port is not writable: %1").arg(port));
+                msg = tr("Serial port is not writable: %1").arg(port);
+                emit errorOccured(msg);
                 return false;
             }
         }
@@ -79,10 +85,14 @@ bool Serial::isValidPort(const QString& port)
 
 QString Serial::currentStatus()
 {
+    QString msg;
+
     if (isConnected()) {
-        return (tr("Serial Connected to %1").arg(mTransport->portName()));
+        msg = tr("Serial Connected to %1").arg(mTransport->portName());
+    } else {
+        msg = tr("Serial Not connected");
     }
-    return tr("Serial Not connected");
+    return msg;
 }
 
 QList<QSerialPortInfo> Serial::ports()
@@ -111,10 +121,8 @@ void Serial::onReadyRead()
 
 void Serial::onError(QSerialPort::SerialPortError error)
 {
-    if (QSerialPort::NoError == error) {
-        return;
+    if (QSerialPort::NoError != error) {
+        emit errorOccured(mTransport->errorString());
+        disconnect();
     }
-
-    emit errorOccured(mTransport->errorString());
-    disconnect();
 }
