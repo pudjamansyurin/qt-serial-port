@@ -15,8 +15,8 @@ public:
     void disconnect();
     bool isConnected();
 
-    QString currentStatus();
-    QList<QSerialPortInfo> ports();
+    QString getStatus();
+    QList<QSerialPortInfo> getPorts();
 
     int write(QByteArray& packet);
 
