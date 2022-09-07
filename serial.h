@@ -9,21 +9,58 @@ class Serial : public QObject {
     Q_OBJECT
 public:
     explicit Serial(QObject* parent = nullptr);
+    ~Serial();
 
-    void toggleConnection(const QString& port, int baudrate);
-    bool connectSerial(const QString& port, int baudrate);
-    void disconnect();
-    bool isConnected();
+    bool conect(const QString& port, int baudrate);
+    bool disconnect();
+    QString getStatus() const;
 
-    QString getStatus();
-    QList<QSerialPortInfo> getPorts();
+    /**
+     * @brief Toggle connection state
+     *
+     * @param port      Reference to port value
+     * @param baudrate  Baudrate value
+     */
+    void toggle(const QString& port, int baudrate)
+    {
+        isConnected() ? disconnect() : conect(port, baudrate);
+    }
 
-    int write(QByteArray& packet);
+    /**
+     * @brief Check is serial transport connection state
+     *
+     * @return true if connected, otherwise not.
+     */
+    bool isConnected() const
+    {
+        return (mTransport->isOpen());
+    }
+
+    /**
+     * @brief Get available serial ports
+     *
+     * @return List of serial ports
+     */
+    QList<QSerialPortInfo> getPorts() const
+    {
+        return (QSerialPortInfo::availablePorts());
+    }
+
+    /**
+     * @brief Write into serial transport
+     *
+     * @param packet Reference to byte array data to be sent
+     * @return -1 in case of error, otherwise amount of transfered bytes
+     */
+    int write(const QByteArray& packet)
+    {
+        return (isConnected() ? mTransport->write(packet) : -1);
+    }
 
 private:
     QSerialPort* mTransport;
 
-    bool isValidPort(const QString& port);
+    bool isValidPort(const QString& port) const;
 
 private slots:
     void onReadyRead();
@@ -32,7 +69,7 @@ private slots:
 signals:
     void statusChanged(bool connected);
     void errorOccured(const QString& error);
-    void packetReady(QByteArray& packet);
+    void packetReady(const QByteArray& packet);
 };
 
 #endif // SERIAL_H

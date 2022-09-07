@@ -2,38 +2,27 @@
 
 Serial::Serial(QObject* parent)
     : QObject { parent }
+    , mTransport(new QSerialPort)
 {
-    mTransport = new QSerialPort(this);
-
     connect(mTransport, &QSerialPort::readyRead,
         this, &Serial::onReadyRead);
     connect(mTransport, &QSerialPort::errorOccurred,
         this, &Serial::onError);
 }
 
-/**
- * @brief Toggle connection state
- *
- * @param port      Reference to port value
- * @param baudrate  Baudrate value
- */
-void Serial::toggleConnection(const QString& port, int baudrate)
+Serial::~Serial()
 {
-    if (!isConnected()) {
-        connectSerial(port, baudrate);
-    } else {
-        disconnect();
-    }
+    delete mTransport;
 }
 
 /**
  * @brief Connect to serial transport
  *
- * @param port      Reference to port value
+ * @param port      Port name
  * @param baudrate  Baudrate value
- * @return true in case of success, otherwise error
+ * @return OK status
  */
-bool Serial::connectSerial(const QString& port, int baudrate)
+bool Serial::conect(const QString& port, int baudrate)
 {
     QString msg;
 
@@ -41,7 +30,7 @@ bool Serial::connectSerial(const QString& port, int baudrate)
     if (!isValidPort(port)) {
         msg = tr("Invalid serial port %1").arg(port);
         emit errorOccured(msg);
-        return false;
+        return (false);
     }
 
     /* only connect when disconnected */
@@ -51,7 +40,7 @@ bool Serial::connectSerial(const QString& port, int baudrate)
         mTransport->setPortName(port);
         mTransport->open(QIODevice::ReadWrite);
         if (!isConnected()) {
-            return false;
+            return (false);
         }
 
         /* configure serial parameters */
@@ -63,13 +52,15 @@ bool Serial::connectSerial(const QString& port, int baudrate)
     }
 
     emit statusChanged(isConnected());
-    return true;
+    return (true);
 }
 
 /**
  * @brief Disconnect serial transport
+ *
+ * @return OK status
  */
-void Serial::disconnect()
+bool Serial::disconnect()
 {
     /* close if still open */
     if (mTransport->isOpen()) {
@@ -78,41 +69,32 @@ void Serial::disconnect()
     }
 
     emit statusChanged(isConnected());
-}
-
-/**
- * @brief Check is serial transport connection state
- *
- * @return true if connected, otherwise not.
- */
-bool Serial::isConnected()
-{
-    return mTransport->isOpen();
+    return (true);
 }
 
 /**
  * @brief Validate serial port
  *
- * @param port      Reference to port value
- * @return true in case of valid, otherwise not
+ * @param port  Port name
+ * @return Valid status
  */
-bool Serial::isValidPort(const QString& port)
+bool Serial::isValidPort(const QString& port) const
 {
     /* walk through available ports */
     for (const QSerialPortInfo& ser : getPorts()) {
         if (ser.systemLocation() == port) {
-            return true;
+            return (true);
         }
     }
-    return false;
+    return (false);
 }
 
 /**
- * @brief Get current serial status as string
+ * @brief Get current serial status (text)
  *
- * @return String of serial status
+ * @return Text of serial status
  */
-QString Serial::getStatus()
+QString Serial::getStatus() const
 {
     QString msg;
 
@@ -122,32 +104,7 @@ QString Serial::getStatus()
         msg = tr("Serial Not connected");
     }
 
-    return msg;
-}
-
-/**
- * @brief Get available serial ports
- *
- * @return List of serial ports
- */
-QList<QSerialPortInfo> Serial::getPorts()
-{
-    return QSerialPortInfo::availablePorts();
-}
-
-/**
- * @brief Write into serial transport
- *
- * @param packet Reference to byte array data to be sent
- * @return -1 in case of error, otherwise amount of transfered bytes
- */
-int Serial::write(QByteArray& packet)
-{
-    if (isConnected()) {
-        return (mTransport->write(packet));
-    }
-
-    return -1;
+    return (msg);
 }
 
 /**
