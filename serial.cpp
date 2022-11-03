@@ -1,18 +1,33 @@
 #include "serial.h"
+#include <QThread>
+
+#define WAIT_SENT_MS 1000
 
 Serial::Serial(QObject* parent)
     : QObject { parent }
-    , mTransport(new QSerialPort)
+    , mPort(new QSerialPort)
 {
-    connect(mTransport, &QSerialPort::readyRead,
+    connect(mPort, &QSerialPort::readyRead,
         this, &Serial::onReadyRead);
-    connect(mTransport, &QSerialPort::errorOccurred,
+    connect(mPort, &QSerialPort::errorOccurred,
         this, &Serial::onError);
+    connect(mPort, &QSerialPort::bytesWritten,
+        this, [this](qint64 bytes) {
+            Q_UNUSED(bytes);
+            if (mAutoBreak) {
+                QThread::msleep(15);
+                mPort->setBreakEnabled(true);
+                QThread::msleep(1);
+                mPort->setBreakEnabled(false);
+            }
+        });
+
+    setAutoBreak(false);
 }
 
 Serial::~Serial()
 {
-    delete mTransport;
+    delete mPort;
 }
 
 /**
@@ -37,18 +52,18 @@ bool Serial::conect(const QString& port, int baudrate)
     if (!isConnected()) {
 
         /* open serial connection */
-        mTransport->setPortName(port);
-        mTransport->open(QIODevice::ReadWrite);
+        mPort->setPortName(port);
+        mPort->open(QIODevice::ReadWrite);
         if (!isConnected()) {
             return (false);
         }
 
         /* configure serial parameters */
-        mTransport->setBaudRate(baudrate);
-        mTransport->setDataBits(QSerialPort::Data8);
-        mTransport->setParity(QSerialPort::NoParity);
-        mTransport->setStopBits(QSerialPort::OneStop);
-        mTransport->setFlowControl(QSerialPort::NoFlowControl);
+        mPort->setBaudRate(baudrate);
+        mPort->setDataBits(QSerialPort::Data8);
+        mPort->setParity(QSerialPort::NoParity);
+        mPort->setStopBits(QSerialPort::OneStop);
+        mPort->setFlowControl(QSerialPort::NoFlowControl);
     }
 
     emit statusChanged(isConnected());
@@ -63,13 +78,32 @@ bool Serial::conect(const QString& port, int baudrate)
 bool Serial::disconnect()
 {
     /* close if still open */
-    if (mTransport->isOpen()) {
-        mTransport->flush();
-        mTransport->close();
+    if (mPort->isOpen()) {
+        mPort->flush();
+        mPort->close();
     }
 
     emit statusChanged(isConnected());
     return (true);
+}
+
+/**
+ * @brief Write into serial transport
+ *
+ * @param packet Reference to byte array data to be sent
+ * @return -1 in case of error, otherwise amount of transfered bytes
+ */
+int Serial::write(const QByteArray& packet)
+{
+    int rc;
+
+    rc = -1;
+
+    if (isConnected()) {
+        rc = mPort->write(packet);
+    }
+
+    return (rc);
 }
 
 /**
@@ -99,7 +133,7 @@ QString Serial::getStatus() const
     QString msg;
 
     if (isConnected()) {
-        msg = tr("Serial Connected to %1").arg(mTransport->portName());
+        msg = tr("Serial Connected to %1").arg(mPort->portName());
     } else {
         msg = tr("Serial Not connected");
     }
@@ -114,8 +148,8 @@ void Serial::onReadyRead()
 {
     QByteArray packet;
 
-    while (0 < mTransport->bytesAvailable()) {
-        packet.append(mTransport->readAll());
+    while (0 < mPort->bytesAvailable()) {
+        packet.append(mPort->readAll());
     }
 
     emit packetReady(packet);
@@ -131,7 +165,7 @@ void Serial::onError(QSerialPort::SerialPortError error)
     QString msg;
 
     if (QSerialPort::NoError != error) {
-        msg = mTransport->errorString();
+        msg = mPort->errorString();
         emit errorOccured(msg);
         disconnect();
     }

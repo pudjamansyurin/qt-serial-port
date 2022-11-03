@@ -15,6 +15,18 @@ public:
     bool disconnect();
     QString getStatus() const;
 
+    int write(const QByteArray& packet);
+
+    /**
+     * @brief Send automatic break signal
+     *
+     * @param state Break state
+     */
+    void setAutoBreak(bool state)
+    {
+        mAutoBreak = state;
+    }
+
     /**
      * @brief Toggle connection state
      *
@@ -33,7 +45,7 @@ public:
      */
     bool isConnected() const
     {
-        return (mTransport->isOpen());
+        return (mPort->isOpen());
     }
 
     /**
@@ -46,19 +58,9 @@ public:
         return (QSerialPortInfo::availablePorts());
     }
 
-    /**
-     * @brief Write into serial transport
-     *
-     * @param packet Reference to byte array data to be sent
-     * @return -1 in case of error, otherwise amount of transfered bytes
-     */
-    int write(const QByteArray& packet)
-    {
-        return (isConnected() ? mTransport->write(packet) : -1);
-    }
-
 private:
-    QSerialPort* mTransport;
+    QSerialPort* mPort;
+    bool mAutoBreak;
 
     bool isValidPort(const QString& port) const;
 
