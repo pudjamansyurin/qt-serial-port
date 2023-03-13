@@ -3,12 +3,11 @@
 
 #define WAIT_SENT_MS 1000
 
-Serial::Serial(QObject* parent)
+Serial::Serial(int sampleMS, QObject* parent)
     : QObject { parent }
     , mPort(new QSerialPort)
+    , mSampleMS(sampleMS)
 {
-    connect(mPort, &QSerialPort::readyRead,
-        this, &Serial::onReadyRead);
     connect(mPort, &QSerialPort::errorOccurred,
         this, &Serial::onError);
     connect(mPort, &QSerialPort::bytesWritten,
@@ -23,6 +22,16 @@ Serial::Serial(QObject* parent)
         });
 
     setAutoBreak(false);
+
+    if (0 >= sampleMS) {
+        connect(mPort, &QSerialPort::readyRead,
+            this, &Serial::onReadyRead);
+    } else {
+        mTimer = new QTimer(this);
+        connect(mTimer, &QTimer::timeout,
+            this, &Serial::onReadyRead);
+        mTimer->start(sampleMS);
+    }
 }
 
 Serial::~Serial()
@@ -152,7 +161,9 @@ void Serial::onReadyRead()
         packet.append(mPort->readAll());
     }
 
-    emit packetReady(packet);
+    if (!packet.isEmpty()) {
+        emit packetReady(packet);
+    }
 }
 
 /**

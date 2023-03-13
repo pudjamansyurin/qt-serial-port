@@ -4,11 +4,12 @@
 #include <QObject>
 #include <QSerialPort>
 #include <QSerialPortInfo>
+#include <QTimer>
 
 class Serial : public QObject {
     Q_OBJECT
 public:
-    explicit Serial(QObject* parent = nullptr);
+    explicit Serial(int sampleMS, QObject* parent = nullptr);
     ~Serial();
 
     bool conect(const QString& port, int baudrate);
@@ -61,6 +62,9 @@ public:
 private:
     QSerialPort* mPort;
     bool mAutoBreak;
+
+    int mSampleMS;
+    QTimer* mTimer;
 
     bool isValidPort(const QString& port) const;
 
