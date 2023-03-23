@@ -157,11 +157,8 @@ void Serial::onReadyRead()
 {
     QByteArray packet;
 
-    while (0 < mPort->bytesAvailable()) {
+    if (0 < mPort->bytesAvailable()) {
         packet.append(mPort->readAll());
-    }
-
-    if (!packet.isEmpty()) {
         emit packetReady(packet);
     }
 }
