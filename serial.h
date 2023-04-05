@@ -76,6 +76,7 @@ signals:
     void statusChanged(bool connected);
     void errorOccured(const QString& error);
     void packetReady(const QByteArray& packet);
+    void packetEmpty(void);
 };
 
 #endif // SERIAL_H

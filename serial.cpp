@@ -51,19 +51,19 @@ bool Serial::conect(const QString& port, int baudrate)
     QString msg;
 
     /* validate port */
-    if (!isValidPort(port)) {
+    if (not isValidPort(port)) {
         msg = tr("Invalid serial port %1").arg(port);
         emit errorOccured(msg);
         return (false);
     }
 
     /* only connect when disconnected */
-    if (!isConnected()) {
+    if (not isConnected()) {
 
         /* open serial connection */
         mPort->setPortName(port);
         mPort->open(QIODevice::ReadWrite);
-        if (!isConnected()) {
+        if (not isConnected()) {
             return (false);
         }
 
@@ -155,11 +155,10 @@ QString Serial::getStatus() const
  */
 void Serial::onReadyRead()
 {
-    QByteArray packet;
-
     if (0 < mPort->bytesAvailable()) {
-        packet.append(mPort->readAll());
-        emit packetReady(packet);
+        emit packetReady(mPort->readAll());
+    } else {
+        emit packetEmpty();
     }
 }
 
