@@ -3,10 +3,11 @@
 
 #define WAIT_SENT_MS 1000
 
-Serial::Serial(int sampleMS, QObject* parent)
+Serial::Serial(int timerFreq, QObject* parent)
     : QObject { parent }
     , mPort(new QSerialPort)
-    , mSampleMS(sampleMS)
+    , mTimerFreq(timerFreq)
+    , mTimer { new QTimer(this) }
 {
     connect(mPort, &QSerialPort::errorOccurred,
         this, &Serial::onError);
@@ -23,36 +24,77 @@ Serial::Serial(int sampleMS, QObject* parent)
 
     setAutoBreak(false);
 
-    if (0 >= sampleMS) {
-        connect(mPort, &QSerialPort::readyRead,
-            this, &Serial::onReadyRead);
-    } else {
-        mTimer = new QTimer(this);
+    if (0 < mTimerFreq) {
         connect(mTimer, &QTimer::timeout,
             this, &Serial::onReadyRead);
-        mTimer->start(sampleMS);
+        mTimer->start(1000 / mTimerFreq);
+    } else {
+        connect(mPort, &QSerialPort::readyRead,
+            this, &Serial::onReadyRead);
     }
 }
 
 Serial::~Serial()
 {
+    delete mTimer;
     delete mPort;
+}
+
+/**
+ * @brief Send automatic break signal
+ *
+ * @param state Break state
+ */
+void Serial::setAutoBreak(bool state)
+{
+    mAutoBreak = state;
+}
+
+/**
+ * @brief Toggle connection state
+ *
+ * @param port      Reference to port value
+ * @param baud      Baudrate value
+ */
+void Serial::toggle(const QString& port, int baud)
+{
+    isConnected() ? disconnect() : conect(port, baud);
+}
+
+/**
+ * @brief Check is serial transport connection state
+ *
+ * @return true if connected, otherwise not.
+ */
+bool Serial::isConnected() const
+{
+    return (mPort->isOpen());
+}
+
+/**
+ * @brief Get available serial ports
+ *
+ * @return List of serial ports
+ */
+QList<QSerialPortInfo> Serial::getPorts() const
+{
+    return (QSerialPortInfo::availablePorts());
 }
 
 /**
  * @brief Connect to serial transport
  *
  * @param port      Port name
- * @param baudrate  Baudrate value
+ * @param baud      Baudrate value
  * @return OK status
  */
-bool Serial::conect(const QString& port, int baudrate)
+bool Serial::conect(const QString& port, int baud)
 {
     QString msg;
 
     /* validate port */
     if (not isValidPort(port)) {
-        msg = tr("Invalid serial port %1").arg(port);
+        msg = tr("Serial: Invalid port %1").arg(port);
         emit errorOccured(msg);
         return (false);
     }
@@ -68,7 +110,7 @@ bool Serial::conect(const QString& port, int baudrate)
         }
 
         /* configure serial parameters */
-        mPort->setBaudRate(baudrate);
+        mPort->setBaudRate(baud);
         mPort->setDataBits(QSerialPort::Data8);
         mPort->setParity(QSerialPort::NoParity);
         mPort->setStopBits(QSerialPort::OneStop);
@@ -142,9 +184,9 @@ QString Serial::getStatus() const
     QString msg;
 
     if (isConnected()) {
-        msg = tr("Serial Connected to %1").arg(mPort->portName());
+        msg = tr("Serial: Connected to %1").arg(mPort->portName());
     } else {
-        msg = tr("Serial Not connected");
+        msg = tr("Serial: Not connected");
     }
 
     return (msg);

@@ -9,61 +9,24 @@
 class Serial : public QObject {
     Q_OBJECT
 public:
-    explicit Serial(int sampleMS, QObject* parent = nullptr);
+    explicit Serial(int timerFreq, QObject* parent = nullptr);
     ~Serial();
 
-    bool conect(const QString& port, int baudrate);
+    bool conect(const QString& port, int baud);
     bool disconnect();
     QString getStatus() const;
 
     int write(const QByteArray& packet);
-
-    /**
-     * @brief Send automatic break signal
-     *
-     * @param state Break state
-     */
-    void setAutoBreak(bool state)
-    {
-        mAutoBreak = state;
-    }
-
-    /**
-     * @brief Toggle connection state
-     *
-     * @param port      Reference to port value
-     * @param baudrate  Baudrate value
-     */
-    void toggle(const QString& port, int baudrate)
-    {
-        isConnected() ? disconnect() : conect(port, baudrate);
-    }
-
-    /**
-     * @brief Check is serial transport connection state
-     *
-     * @return true if connected, otherwise not.
-     */
-    bool isConnected() const
-    {
-        return (mPort->isOpen());
-    }
-
-    /**
-     * @brief Get available serial ports
-     *
-     * @return List of serial ports
-     */
-    QList<QSerialPortInfo> getPorts() const
-    {
-        return (QSerialPortInfo::availablePorts());
-    }
+    void setAutoBreak(bool state);
+    void toggle(const QString& port, int baud);
+    bool isConnected() const;
+    QList<QSerialPortInfo> getPorts() const;
 
 private:
     QSerialPort* mPort;
     bool mAutoBreak;
 
-    int mSampleMS;
+    int mTimerFreq;
     QTimer* mTimer;
 
     bool isValidPort(const QString& port) const;
