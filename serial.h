@@ -24,10 +24,8 @@ public:
 
 private:
     QSerialPort* mPort;
-    bool mAutoBreak;
-
-    int mTimerFreq;
     QTimer* mTimer;
+    bool mAutoBreak;
 
     bool isValidPort(const QString& port) const;
 

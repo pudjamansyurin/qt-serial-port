@@ -5,10 +5,12 @@
 
 Serial::Serial(int timerFreq, QObject* parent)
     : QObject { parent }
-    , mPort(new QSerialPort)
-    , mTimerFreq(timerFreq)
-    , mTimer { new QTimer(this) }
 {
+    /* create dependencies */
+    mPort = new QSerialPort(this);
+    mTimer = new QTimer(this);
+
+    /* connect listeners */
     connect(mPort, &QSerialPort::errorOccurred,
         this, &Serial::onError);
     connect(mPort, &QSerialPort::bytesWritten,
@@ -22,12 +24,10 @@ Serial::Serial(int timerFreq, QObject* parent)
             }
         });
 
-    setAutoBreak(false);
-
-    if (0 < mTimerFreq) {
+    if (0 < timerFreq) {
         connect(mTimer, &QTimer::timeout,
             this, &Serial::onReadyRead);
-        mTimer->start(1000 / mTimerFreq);
+        mTimer->start(1000 / timerFreq);
     } else {
         connect(mPort, &QSerialPort::readyRead,
             this, &Serial::onReadyRead);
