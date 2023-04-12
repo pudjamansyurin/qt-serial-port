@@ -16,7 +16,7 @@ Serial::Serial(int timerFreq, QObject* parent)
     connect(mPort, &QSerialPort::bytesWritten,
         this, [this](qint64 bytes) {
             Q_UNUSED(bytes);
-            if (mAutoBreak) {
+            if (mBreak) {
                 QThread::msleep(15);
                 mPort->setBreakEnabled(true);
                 QThread::msleep(1);
@@ -45,9 +45,9 @@ Serial::~Serial()
  *
  * @param state Break state
  */
-void Serial::setAutoBreak(bool state)
+void Serial::setBreak(bool state)
 {
-    mAutoBreak = state;
+    mBreak = state;
 }
 
 /**
@@ -197,8 +197,11 @@ QString Serial::getStatus() const
  */
 void Serial::onReadyRead()
 {
-    if (0 < mPort->bytesAvailable()) {
-        emit packetReady(mPort->readAll());
+    int cnt;
+
+    cnt = mPort->bytesAvailable();
+    if (0 < cnt) {
+        emit packetReady(mPort->read(cnt));
     } else {
         emit packetEmpty();
     }

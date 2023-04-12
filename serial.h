@@ -17,16 +17,12 @@ public:
     QString getStatus() const;
 
     int write(const QByteArray& packet);
-    void setAutoBreak(bool state);
+    void setBreak(bool state);
     void toggle(const QString& port, int baud);
     bool isConnected() const;
     QList<QSerialPortInfo> getPorts() const;
 
 private:
-    QSerialPort* mPort;
-    QTimer* mTimer;
-    bool mAutoBreak;
-
     bool isValidPort(const QString& port) const;
 
 private slots:
@@ -38,6 +34,11 @@ signals:
     void errorOccured(const QString& error);
     void packetReady(const QByteArray& packet);
     void packetEmpty(void);
+
+private:
+    QSerialPort* mPort;
+    QTimer* mTimer;
+    bool mBreak;
 };
 
 #endif // SERIAL_H
